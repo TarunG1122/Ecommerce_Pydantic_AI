@@ -1,4 +1,13 @@
-ecpyenv
+# Local Python environments
+ecpyenv/
+shopenv/
+
+# Credentials and certificates
+atlas-credentials.env
+*.pem
+*.key
+*.p12
+*.pfx
 
 
 # Dependencies

@@ -1,6 +1,7 @@
 # python stuff
 passlib[bcrypt]
 pymongo
+certifi
 python-dotenv
 
 # backend
@@ -16,5 +17,6 @@ logfire[fastapi]
 # ai stuff
 nest-asyncio
 pydantic-ai
+openai
 groq
 pydantic-ai-slim[tavily]
