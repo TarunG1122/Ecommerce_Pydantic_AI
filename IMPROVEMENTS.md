@@ -2,6 +2,12 @@
 
 ## What has been added
 
+### Realistic apparel catalog
+
+The Admin page can now replace the demo records with 500 curated, brand-neutral ecommerce-style products. Each record has a realistic name, price, size range, colour, fabric, fit, occasion, pattern, rating, stock status, SKU, and stable fashion image URL.
+
+The catalog intentionally does not copy Amazon, Flipkart, or another retailer's product listings. The chatbot can use the new fabric, fit, occasion, and pattern fields when customers search.
+
 ### 1. Fast hybrid chatbot search
 
 OpenAI interprets every shopping request, including short prompts such as `show women dress under 3000` and `white shirt`, and calls the catalog-search tool with structured filters.

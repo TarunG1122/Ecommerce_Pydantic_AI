@@ -45,6 +45,10 @@ def product_matches(
     max_price: Optional[int] = None,
     min_price: Optional[int] = None,
     color: Optional[str] = None,
+    fabric: Optional[str] = None,
+    fit: Optional[str] = None,
+    occasion: Optional[str] = None,
+    pattern: Optional[str] = None,
 ) -> bool:
     """Strictly apply the filters selected by OpenAI to one catalog product."""
     if category and str(product.get("category", "")).casefold() != category.strip().casefold():
@@ -61,6 +65,9 @@ def product_matches(
         product_colors = [product_colors]
     if color and color.strip().casefold() not in {str(value).strip().casefold() for value in product_colors}:
         return False
+    for requested, field in ((fabric, "fabric"), (fit, "fit"), (occasion, "occasion"), (pattern, "pattern")):
+        if requested and requested.strip().casefold() not in str(product.get(field, "")).casefold():
+            return False
     return True
 
 
@@ -70,11 +77,15 @@ def search_catalog(
     max_price: Optional[int] = None,
     min_price: Optional[int] = None,
     color: Optional[str] = None,
+    fabric: Optional[str] = None,
+    fit: Optional[str] = None,
+    occasion: Optional[str] = None,
+    pattern: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Search products using OpenAI-selected filters, without regex matching."""
     results = []
     for product in products_collection.find({}):
-        if not product_matches(product, category, keyword, max_price, min_price, color):
+        if not product_matches(product, category, keyword, max_price, min_price, color, fabric, fit, occasion, pattern):
             continue
         product["id"] = str(product.pop("_id"))
         product.pop("image_data", None)
@@ -107,7 +118,8 @@ agent = Agent(
         "customer requirements with the latest message before searching. For example, a prior 'red dress' plus "
         "a latest 'under 3000' means search red dresses under 3000. Never ask for a colour, price, category, "
         "or item that the customer has already provided; search with the known information instead. Do not invent "
-        "product data. For greetings, reply warmly. For unrelated requests, reply that you can only help with "
+        "product data. Extract fabric, fit, occasion, and pattern whenever the customer mentions them, then pass "
+        "them to the search tool. For greetings, reply warmly. For unrelated requests, reply that you can only help with "
         "clothing shopping."
     ),
 )
@@ -121,9 +133,13 @@ def search_products(
     max_price: Optional[int] = None,
     min_price: Optional[int] = None,
     color: Optional[str] = None,
+    fabric: Optional[str] = None,
+    fit: Optional[str] = None,
+    occasion: Optional[str] = None,
+    pattern: Optional[str] = None,
 ) -> str:
-    """Search products using category, item keyword, price limits, and an exact colour."""
-    products = search_catalog(category, keyword, max_price, min_price, color)
+    """Search products by item, price, colour, fabric, fit, occasion, and pattern."""
+    products = search_catalog(category, keyword, max_price, min_price, color, fabric, fit, occasion, pattern)
     ctx.deps.found_products = products
     if not products:
         return "No products found matching those filters."

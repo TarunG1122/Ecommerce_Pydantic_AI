@@ -22,7 +22,7 @@ export async function renderAdmin() {
         <h1 class="admin-title">Add / Manage Products</h1>
         <div style="display: flex; gap: 0.5rem;">
           <button id="deleteAllBtn" class="btn btn-danger" style="background: #ef4444; color: white; font-weight: bold;">🧨 Delete All Products</button>
-          <button id="bulkGenBtn" class="btn btn-warning" style="background: #eab308; color: black; font-weight: bold;">⚡ Generate 500 Demo Products</button>
+          <button id="bulkGenBtn" class="btn btn-warning" style="background: #eab308; color: black; font-weight: bold;">⚡ Refresh 500 Realistic Products</button>
         </div>
       </div>
       ${metrics ? `
@@ -133,16 +133,19 @@ function setupAdminEvents() {
   });
   
   document.getElementById('bulkGenBtn')?.addEventListener('click', async () => {
+    if (!confirm('Replace the current catalog with 500 curated realistic products? Custom products will be removed.')) {
+      return;
+    }
     const btn = document.getElementById('bulkGenBtn');
     btn.textContent = "⏳ Generating...";
     btn.disabled = true;
     try {
-      await bulkGenerateProducts();
-      alert('500 Products Generated Successfully! Images may take a moment to load from LoremFlickr.');
+      await bulkGenerateProducts(true);
+      alert('500 realistic catalog products are ready. The chatbot can now search colour, fabric, fit, occasion, and pattern.');
       renderAdmin();
     } catch(e) {
       alert('Failed to generate products.');
-      btn.textContent = "⚡ Generate 500 Demo Products";
+      btn.textContent = "⚡ Refresh 500 Realistic Products";
       btn.disabled = false;
     }
   });

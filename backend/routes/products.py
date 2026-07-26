@@ -4,6 +4,7 @@ Product management routes including addition, retrieval, updating, and deletion.
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from ..models import Product
 from ..database import products_collection
+from ..catalog_seed import build_realistic_catalog
 import base64
 from bson import ObjectId
 from typing import Optional
@@ -120,13 +121,19 @@ def delete_all_products():
 
 
 @router.post("/bulk-generate-500")
-def bulk_generate_500():
+def bulk_generate_500(replace_existing: bool = False):
     """
-    Generate 500 demo clothing products across 3 categories: men, women, kids.
-    Items are consistent and keyword-searchable (e.g. "Classic Blue Jeans").
-    Each category gets ~166 products cycling through real clothing item types.
-    Images come from loremflickr.com using category-specific fashion keywords.
+    Generate a curated 500-product apparel catalog with realistic ecommerce metadata.
+    Set replace_existing=true to refresh the current catalog after confirmation.
     """
+    if replace_existing:
+        products_collection.delete_many({})
+    products_collection.insert_many(build_realistic_catalog())
+    return {
+        "message": "500 realistic catalog products generated successfully!",
+        "replaced_existing": replace_existing,
+    }
+
     import random
 
     adjectives = ["Classic", "Modern", "Premium", "Casual", "Elegant", "Trendy",

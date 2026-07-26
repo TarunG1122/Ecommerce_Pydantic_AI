@@ -59,8 +59,9 @@ export async function getRecommendations(userEmail) {
 /**
  * Generate 500 demo products instantaneously via the backend Python script.
  */
-export async function bulkGenerateProducts() {
-  const res = await fetch(`${API_BASE}/products/bulk-generate-500`, {
+export async function bulkGenerateProducts(replaceExisting = false) {
+  const query = replaceExisting ? '?replace_existing=true' : '';
+  const res = await fetch(`${API_BASE}/products/bulk-generate-500${query}`, {
     method: 'POST'
   });
   return await res.json();
