@@ -4,6 +4,8 @@ ClothStore AI is an end-to-end clothing-commerce prototype that combines a curat
 
 It is designed to demonstrate more than a chatbot: the assistant understands shopping constraints, searches real catalogue fields through controlled tools, carries context across turns, and gives helpful alternatives when an exact product is unavailable.
 
+**Live application:** [http://3.27.13.190:8000/](http://3.27.13.190:8000/)
+
 ## Why this project stands out
 
 | Challenge | Implementation | Value |
@@ -12,7 +14,7 @@ It is designed to demonstrate more than a chatbot: the assistant understands sho
 | Multi-turn shopping requests | Recent conversation history is passed with each chat request | A user can say "red dress", then "under Rs. 3000" without repeating the colour or item |
 | Image-only product discovery | Optional image upload plus a text requirement in the same chat composer | Users can ask for visually similar items while still specifying budget, category, or style |
 | Unreliable external services | MongoDB health check with a local JSON fallback | The storefront remains usable during database/network problems |
-| Random demo products | Deterministic, realistic 500-item fashion catalogue | Better demonstrations, filtering, recommendations, and interview walkthroughs |
+| Random demo products | Deterministic, realistic 500-item fashion catalogue | Better demonstrations, filtering, and recommendations |
 | LLM cost and safety | `gpt-4o-mini`, low-detail image analysis, bounded history, and deterministic filtering | Practical AI behaviour without sending unnecessary context or allowing uncontrolled queries |
 
 ## Key capabilities
@@ -25,6 +27,15 @@ It is designed to demonstrate more than a chatbot: the assistant understands sho
 - **Admin operations:** refresh the curated 500-product catalogue and inspect product, order, cart, and storage-mode metrics.
 - **Resilient data layer:** uses MongoDB when available and falls back to a local store for demos and development.
 - **Production-ready delivery basics:** Docker, health checks, `.dockerignore`, GitHub Actions CI/CD, and environment-based secrets.
+
+## Key highlights
+
+- The AI assistant is grounded in the application's own product catalogue, so it returns inventory-backed results rather than fictional recommendations.
+- Users can combine image search and natural-language requirements in one chat message, for example: "Find T-shirts like this under Rs. 5000."
+- Conversation context is retained across recent messages, enabling natural refinement of a search without repeatedly entering the same requirements.
+- The 500-product curated catalogue contains rich metadata that supports accurate filters and meaningful visual similarity ranking.
+- MongoDB provides production persistence, while the local JSON fallback prevents a database outage from making the application unusable.
+- The application is containerised and deployed on AWS using Amazon ECR, an EC2 instance, and GitHub Actions.
 
 ## Architecture
 
@@ -86,7 +97,7 @@ For example, after `I need a red dress`, the follow-up `under Rs. 3000` is under
 
 The language model is responsible for understanding natural language and maintaining a helpful conversation. It is **not** trusted to invent inventory. Product retrieval happens through a controlled Python tool with explicit filters, so every displayed result is backed by the catalogue.
 
-This separation is a strong interview talking point: use an LLM where it is good at language, and use deterministic code where accuracy and business rules matter.
+This separation uses the LLM where it is strongest at language, while deterministic code enforces accuracy and business rules.
 
 ### 3. Visual search in the same chat experience
 
@@ -198,9 +209,20 @@ Useful additional checks:
 docker build -t clothstore-ai .
 ```
 
-## CI/CD and deployment
+## CI/CD and AWS deployment
 
-The workflow in `.github/workflows/cicd.yaml` builds the Docker image, pushes it to Amazon ECR, and deploys it through a self-hosted GitHub Actions runner on EC2. The runner pulls the latest image and restarts the `luxe-app` container on port 8000.
+The live application is available at [http://3.27.13.190:8000/](http://3.27.13.190:8000/). It is deployed to an AWS EC2 instance and runs as the Docker container named `luxe-app` on port `8000`.
+
+The deployment workflow in `.github/workflows/cicd.yaml` automates the following process:
+
+1. A push to the configured branch starts GitHub Actions.
+2. The workflow builds the Docker image from the repository's `Dockerfile`.
+3. GitHub Actions authenticates with AWS and pushes the image to **Amazon Elastic Container Registry (ECR)**.
+4. A self-hosted GitHub Actions runner on the EC2 instance receives the deployment job.
+5. The runner pulls the latest image from ECR, replaces the previous `luxe-app` container, and maps EC2 port `8000` to container port `8000`.
+6. Docker's health check requests `/health` to confirm that the container is running correctly.
+
+This approach keeps the application image in a private container registry, makes deployments repeatable, and allows the EC2 server to update without manually copying project files.
 
 Configure these GitHub repository secrets before deployment:
 
@@ -241,31 +263,6 @@ Dockerfile                      # Python 3.13 production container
 .env.example                    # Safe configuration template
 main.py                         # FastAPI application entry point
 ```
-
-## Interview-ready explanation
-
-### One-minute project introduction
-
-> "I built an AI-assisted clothing store where the LLM understands a shopper's natural-language request, but it never makes up inventory. The model calls a controlled product-search tool that filters real catalogue fields such as colour, price, fabric, fit, and occasion. I also added bounded conversation memory, so requirements accumulate over several turns; optional visual search that converts an uploaded outfit into searchable attributes; and explainable recommendations based on customer interactions. The backend uses MongoDB with a local fallback to keep the demo reliable, while Docker and GitHub Actions automate deployment."
-
-### Strong technical decisions to discuss
-
-- **LLM plus deterministic retrieval:** The model handles intent and response quality; Python owns filtering and business rules. This reduces hallucinated products and makes results testable.
-- **Memory with boundaries:** Only recent, size-limited turns are sent to the model. This preserves shopping context while controlling latency, token cost, and accidental context growth.
-- **Truthful similarity:** Visual search treats "similar" as a ranking problem. It prioritises garment type and visual attributes and clearly reports when the catalogue cannot support the requested similarity.
-- **Graceful degradation:** A MongoDB outage should not make a portfolio demo unusable. The local store is a deliberate resilience strategy, and admin metrics make the active mode visible.
-- **Cost-aware AI design:** `gpt-4o-mini`, low-detail vision input, deterministic post-processing, and no-credit evaluation tests keep the prototype practical to run.
-- **Operational thinking:** Health checks, non-root Docker execution, ignored secrets, CI/CD, and a self-hosted deployment runner show that the work extends beyond a notebook demonstration.
-
-### Questions an interviewer may ask
-
-| Question | Good answer |
-| --- | --- |
-| Why not let the LLM search the database directly? | I use a typed tool boundary so the model can express intent, while server code enforces allowed fields, price rules, and actual inventory access. |
-| How does the chatbot remember a previous requirement? | The frontend sends a bounded recent history. The assistant is prompted to merge previous and current constraints before calling the search tool. |
-| What happens when MongoDB is down? | Startup detects the failed connection and switches to the local JSON store; admin metrics exposes which storage mode is active. |
-| How do you prevent inaccurate visual results? | Vision produces structured garment attributes, then deterministic ranking compares those attributes with catalogue metadata. If confidence is poor, the assistant is transparent and asks for a useful refinement. |
-| How would you scale recommendations? | Keep the interaction-event model, then add embeddings/vector retrieval, offline feature generation, and collaborative filtering as traffic and behavioural data grow. |
 
 ## Future enhancements
 
