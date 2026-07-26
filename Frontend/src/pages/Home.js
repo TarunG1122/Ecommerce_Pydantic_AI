@@ -175,6 +175,14 @@ async function handleChatSend() {
   state.chatInput = input.value.trim();
   if (!state.chatInput && !image) return;
 
+  const conversationHistory = state.chatMessages
+    .map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.sender === 'user' ? msg.text : msg.message,
+    }))
+    .filter(turn => turn.content)
+    .slice(-10);
+
   const userText = image
     ? `Image search${state.chatInput ? `: ${state.chatInput}` : ''}`
     : state.chatInput;
@@ -186,7 +194,7 @@ async function handleChatSend() {
   try {
     const data = image
       ? await visualSearch(image, state.chatInput)
-      : await sendChatMessage(state.chatInput);
+      : await sendChatMessage(state.chatInput, conversationHistory);
     state.chatMessages = [...state.chatMessages, {
       sender: 'bot',
       type: image ? 'products' : data.type,

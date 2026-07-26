@@ -27,11 +27,18 @@ CASES = [
 
 def run_chatbot_evaluations() -> list[dict[str, Any]]:
     """Validate strict catalog guardrails without sending OpenAI requests."""
-    from .routes.chabot import product_matches
+    from .routes.chabot import format_chat_history, product_matches
 
     failures = []
     for description, product, filters, expected in CASES:
         actual = product_matches(product, **filters)
         if actual != expected:
             failures.append({"case": description, "expected": expected, "actual": actual})
+
+    memory = format_chat_history([
+        {"role": "user", "content": "I need a red dress"},
+        {"role": "assistant", "content": "What price range do you prefer?"},
+    ])
+    if "Customer: I need a red dress" not in memory:
+        failures.append({"case": "chat memory keeps earlier requirements", "expected": "red dress", "actual": memory})
     return failures

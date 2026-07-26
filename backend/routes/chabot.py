@@ -14,6 +14,28 @@ load_dotenv()
 
 router = APIRouter(prefix="/chat", tags=["Chatbot"])
 OPENAI_MODEL = "gpt-4o-mini"
+MAX_HISTORY_MESSAGES = 10
+MAX_HISTORY_MESSAGE_LENGTH = 500
+
+
+def format_chat_history(history: Any) -> str:
+    """Create a bounded, text-only memory of the preceding customer conversation."""
+    if not isinstance(history, list):
+        return ""
+
+    formatted = []
+    for turn in history[-MAX_HISTORY_MESSAGES:]:
+        if not isinstance(turn, dict):
+            continue
+        role = turn.get("role")
+        content = turn.get("content")
+        if role not in {"user", "assistant"} or not isinstance(content, str):
+            continue
+        content = content.strip()[:MAX_HISTORY_MESSAGE_LENGTH]
+        if content:
+            speaker = "Customer" if role == "user" else "Assistant"
+            formatted.append(f"{speaker}: {content}")
+    return "\n".join(formatted)
 
 
 def product_matches(
@@ -81,8 +103,12 @@ agent = Agent(
         "For every request that names clothing, category, colour, budget, or product search intent, "
         "call search_products exactly once with all stated filters. This includes short prompts such as "
         "'white shirt'. Always put an explicitly requested colour in color exactly as requested; never "
-        "substitute a similar colour. Do not invent product data. For greetings, reply warmly. For unrelated "
-        "requests, reply that you can only help with clothing shopping."
+        "substitute a similar colour. The customer may add details over multiple messages: combine all prior "
+        "customer requirements with the latest message before searching. For example, a prior 'red dress' plus "
+        "a latest 'under 3000' means search red dresses under 3000. Never ask for a colour, price, category, "
+        "or item that the customer has already provided; search with the known information instead. Do not invent "
+        "product data. For greetings, reply warmly. For unrelated requests, reply that you can only help with "
+        "clothing shopping."
     ),
 )
 
@@ -111,9 +137,18 @@ async def chat_bot(data: dict = Body(...)):
     if not user_message:
         return {"type": "text", "message": "Please type a message!", "data": None}
 
+    history_text = format_chat_history(data.get("history"))
+    agent_input = user_message
+    if history_text:
+        agent_input = (
+            "Previous conversation for context. Use it only to retain the customer's shopping requirements:\n"
+            f"{history_text}\n\n"
+            f"Latest customer message: {user_message}"
+        )
+
     deps = StoreDeps()
     try:
-        result = await agent.run(user_message, deps=deps)
+        result = await agent.run(agent_input, deps=deps)
         if deps.found_products:
             return {"type": "products", "message": result.output, "data": deps.found_products}
         return {"type": "text", "message": result.output, "data": None}
